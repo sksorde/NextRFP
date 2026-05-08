@@ -1,0 +1,64 @@
+# requirements.txt
+
+# =====================================================
+# PHASE 2 — ENTERPRISE BID INTELLIGENCE PLATFORM
+#
+# RFP Compliance + Shipley Scoring + RAG + pgvector
+# + Executive Review + Knowledge Base Intelligence
+# =====================================================
+
+
+# =====================================================
+# FASTAPI BACKEND
+# =====================================================
+
+fastapi
+uvicorn
+python-multipart
+
+
+# =====================================================
+# DATABASE
+# =====================================================
+
+psycopg2-binary
+
+
+# =====================================================
+# EMBEDDINGS + NLP
+# =====================================================
+
+sentence-transformers
+torch
+transformers
+numpy
+scikit-learn
+
+
+# =====================================================
+# LLM INTEGRATION
+# =====================================================
+
+requests
+
+
+# =====================================================
+# DOCUMENT PROCESSING
+# =====================================================
+
+python-docx
+pdfplumber
+openpyxl
+pandas
+
+
+# =====================================================
+# OPTIONAL ENTERPRISE IMPROVEMENTS
+# (recommended for Phase 3)
+# =====================================================
+
+python-dotenv
+sqlalchemy
+alembic
+redis
+celery
