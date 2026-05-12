@@ -162,6 +162,10 @@ async def review(
                 rfp_bytes,
                 rfp.filename
             )
+            print(
+                f"sks: RFP_TEXT with Uplaod: "
+                f"{rfp_text}"
+            )
 
         elif rfp_text:
             print(

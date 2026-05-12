@@ -235,14 +235,22 @@ Return ONLY this JSON:
             "NOT ADDRESSED"
         )
 
-        # =============================================
-        # TRUE SHIPLEY SCORE
-        # =============================================
+        # =================================================
+        # TRUE SHIPLEY ENGINE
+        # =================================================
 
-        shipley_score = calculate_shipley_score(
+        shipley_result = calculate_shipley_score(
             status=status,
             response=response,
             evidence=evidence
+        )
+
+        shipley_score = (
+            shipley_result["total_score"]
+        )
+
+        shipley_details = (
+            shipley_result["details"]
         )
 
         shipley_rating = shipley_band(
@@ -250,7 +258,24 @@ Return ONLY this JSON:
         )
 
         shipley_guidance = build_shipley_guidance(
-            shipley_score
+            shipley_score,
+            shipley_details
+        )
+
+        from app.services.shipley import (
+            build_shipley_evidence
+        )
+
+        shipley_evidence = (
+            build_shipley_evidence(
+                shipley_details
+            )
+        )
+
+        # ADD SHIPLEY TRACEABILITY
+
+        evidence.extend(
+            shipley_evidence
         )
 
         recommendation = build_recommendation(
@@ -265,6 +290,9 @@ Return ONLY this JSON:
         parsed["shipley_score"] = shipley_score
         parsed["shipley_rating"] = shipley_rating
         parsed["shipley_guidance"] = shipley_guidance
+        parsed["shipley_breakdown"] = (
+            shipley_details
+        )
         parsed["recommendation"] = recommendation
         parsed["evidence"] = evidence
 

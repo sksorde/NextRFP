@@ -247,7 +247,12 @@ def load(
                             content=chunk,
                             embedding=embedding,
                             source_file=file,
-                            category="shipley" if "shipley" in file.lower() else "general"
+                            #category="shipley" if "shipley" in file.lower() else "general"
+                            category=(
+                                "shipley_scoring"
+                                if "shipley" in file.lower()
+                                else os.path.basename(root)
+                            )
                         )
 
                         total_chunks += 1

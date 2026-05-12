@@ -1,0 +1,1 @@
+All customer data is encrypted at rest using AES-256 and in transit using TLS 1.2 or higher.

@@ -1,0 +1,1 @@
+Customer data is hosted in-region, with primary and backup locations remaining within national borders.

@@ -1,0 +1,116 @@
+m working on AVD and I have python 3.14.4 installed with pip 26.0.1 and postgresql, nodejs, my requirement is to build AI tool for RFP/bid proposal work for multiple purposes like reviewer/validator where it checks compliance, shipley scoring, grammar checks, customer language, quality, determine any gaps and provide recommendations...this should use RAG with past successful bids, best practices and required documents for RAG in a first phase, store embeddings in vector database...this should be further extended to draft RFP responses and later win predictions...ultimately I want production grade end to end RFP/bid AI tool, provide me complete code to download...should I use react as front-end or nodejs as production grade? 
+
+
+cd backend
+python -m venv venv
+source venv/bin/activate          # Linux / Mac
+# venv\Scripts\activate           # Windows
+pip install -r requirements.txt
+
+
+
+cd ../frontend
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+cd ../backend
+uvicorn main:app --host 127.0.0.1 --port 8000
+uvicorn app.main:app --reload
+
+npm run dev
+
+streamlit run app.py --server.port 8501
+
+
+“Show me all RFPs reviewed this quarter”✅“Compare Vendor A vs Vendor B”✅“Why was this bid rejected?” (audit)✅“Improve model from past wins/losses”✅“Who ran this review?” (governance)✅“Export evaluation records later”✅
+
+
+
+git remote add upstream https://github.com/kunalgupta10/RFP-Bid-Response-Evaluator.git
+git fetch upstream
+git checkout main
+git merge upstream/main
+git push origin main
+
+git add .
+git commit -m "sks"
+
+----------POSTGRESQL------------------------
+
+postgres=# CREATE DATABASE rfp;
+//CREATE DATABASE
+postgres=# \c rfp;
+//You are now connected to database "rfp" as user "postgres".
+rfp=# CREATE EXTENSION vector;
+
+
+
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE IF NOT EXISTS kb_chunks (
+    id SERIAL PRIMARY KEY,
+    content TEXT,
+    embedding vector(384),
+    source_file TEXT,
+    category TEXT
+);
+
+CREATE TABLE compliance_cache (
+    id SERIAL PRIMARY KEY,
+    requirement_hash TEXT UNIQUE,
+    requirement TEXT,
+    result JSONB,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+
+INSERT INTO kb_chunks (content, embedding) SELECT 'test', ('[' || string_agg('0.1', ',') || ']')::vector FROM generate_series(1, 384);
+
+SELECT vector_dims(embedding) FROM kb_chunks LIMIT 1;
+or
+\d kb_chunks
+
+ALTER TABLE kb_chunks ADD COLUMN source_file TEXT, ADD COLUMN category TEXT;
+
+SELECT content FROM kb_chunks LIMIT 5;
+
+SELECT id FROM kb_chunks WHERE content LIKE '%' || chr(0) || '%';
+
+SELECT id, source_file, category, left(content, 200) AS preview from kb_chunks where category like '%hipley% limit 5;
+
+------------------------------------
+
+RFP Question:
+Request for Proposal (RFP)
+Issuer: City of Exampleville IT Department
+Objective: Selection of a Cloud-Based Data Management Vendor
+This RFP defines requirements, evaluation criteria, and submission instructions.
+Scope of Work
+The selected vendor shall provide a secure, scalable, and compliant data platform.
+
+
+RFP Answer:
+Vendor Proposal Response – Acme Technologies
+Executive Summary
+Acme Technologies proposes a secure, ISO-certified cloud solution with proven public-sector success.
+Technical Approach
+Our platform uses AES-256 encryption, RBAC, and zero-trust principles.
+Compliance
+ISO 27001, SOC 2 Type II, GDPR compliant.
+
+=====================
+from local to github:
+create empty repository in github
+go to local folder where code resides and open gitbash
+then run below commands:
+git init
+git branch -M main
+git add .
+git commit -m "initial commit"
+git remote add origin <empty repository from github>
+git push -u origin main
+if error run below:
+git pull --rebase origin main
+git push -u origin main
+=====================

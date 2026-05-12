@@ -1,0 +1,1664 @@
+# BIG PICTURE — WHAT THIS BACKEND IS
+
+Before going line-by-line, understand the whole system first.
+
+This backend is an **AI-powered RFP/Bid Review System**.
+
+It does this:
+
+1. User uploads:
+
+   * RFP document
+   * Vendor response/proposal
+
+2. Backend extracts text from files
+
+3. AI checks:
+
+   * Is requirement answered?
+   * Is response compliant?
+   * Is proposal strong?
+
+4. RAG system searches knowledge base
+
+5. Shipley scoring engine scores proposal quality
+
+6. Results are returned to frontend
+
+---
+
+# VERY IMPORTANT PROGRAMMING FOUNDATION
+
+A beginner must first understand these concepts:
+
+| Concept  | Meaning                                 |
+| -------- | --------------------------------------- |
+| Function | A reusable block of code                |
+| Variable | A container storing data                |
+| Import   | Bringing code from another file/library |
+| API      | A URL endpoint frontend can call        |
+| Database | Permanent storage                       |
+| JSON     | Data format like Python dictionary      |
+| Backend  | Server-side logic                       |
+| FastAPI  | Python framework for APIs               |
+| RAG      | Retrieval-Augmented Generation          |
+| LLM      | AI model like Mistral/GPT               |
+
+---
+
+# FILE 1 — `backend/app/main.py`
+
+This is the **main entry point** of the backend.
+
+Think of it as:
+
+> "The brain boot-up file"
+
+When server starts, Python runs this file first.
+
+---
+
+# CODE EXPLANATION LINE BY LINE
+
+---
+
+```python
+# backend/app/main.py
+```
+
+This is a comment.
+
+Python ignores comments.
+
+Used for:
+
+* explanation
+* documentation
+* readability
+
+---
+
+```python
+from fastapi import FastAPI
+```
+
+# What is happening?
+
+We import `FastAPI` class from FastAPI library.
+
+Think:
+
+```python
+FastAPI = tool for building APIs
+```
+
+Without this:
+
+* no backend server
+* no routes
+* no APIs
+
+---
+
+```python
+from fastapi.middleware.cors import CORSMiddleware
+```
+
+Imports CORS middleware.
+
+Middleware = software layer sitting between request and response.
+
+CORS solves browser security issue.
+
+Without CORS:
+Frontend cannot call backend from another port/domain.
+
+Example:
+
+* frontend → localhost:5173
+* backend → localhost:8000
+
+Browser blocks this unless CORS enabled.
+
+---
+
+```python
+from app.api.routes import router
+```
+
+Imports all API routes from another file.
+
+Meaning:
+
+```python
+Take all endpoints from routes.py
+and attach them to app
+```
+
+---
+
+# STARTUP LOGGING
+
+---
+
+```python
+print("======================================")
+```
+
+Prints line in terminal.
+
+Used for:
+
+* debugging
+* startup logs
+
+---
+
+```python
+print("Starting Enterprise Bid Intelligence API")
+```
+
+Prints startup message.
+
+---
+
+```python
+print("Phase 2 - RFP Compliance + Shipley Scoring")
+```
+
+Explains which system version running.
+
+---
+
+```python
+print("======================================")
+```
+
+Another separator.
+
+---
+
+# CREATE FASTAPI APPLICATION
+
+---
+
+```python
+app = FastAPI(
+```
+
+Creates FastAPI application object.
+
+This is THE SERVER.
+
+Everything connects to this object.
+
+Think:
+
+```python
+app = your backend system
+```
+
+---
+
+```python
+title="Enterprise Bid Intelligence Platform",
+```
+
+API title shown in Swagger docs.
+
+Swagger URL:
+
+```text
+http://localhost:8000/docs
+```
+
+---
+
+```python
+description="""
+```
+
+Multi-line description.
+
+Shown in API documentation.
+
+---
+
+```python
+version="2.0.0"
+```
+
+API version.
+
+Useful in enterprise systems.
+
+---
+
+```python
+)
+```
+
+Ends FastAPI object creation.
+
+---
+
+# CORS CONFIGURATION
+
+---
+
+```python
+app.add_middleware(
+```
+
+Adds middleware to app.
+
+Middleware intercepts requests.
+
+---
+
+```python
+CORSMiddleware,
+```
+
+Specifies middleware type.
+
+---
+
+```python
+allow_origins=[
+```
+
+Which frontend URLs are allowed.
+
+---
+
+```python
+"http://localhost:5173",
+```
+
+Allows Vite frontend.
+
+---
+
+```python
+"http://127.0.0.1:5173",
+```
+
+Same machine alternative format.
+
+---
+
+```python
+"http://localhost:3000",
+```
+
+Allows React/Next.js frontend.
+
+---
+
+```python
+allow_credentials=True,
+```
+
+Allows cookies/auth tokens.
+
+---
+
+```python
+allow_methods=["*"],
+```
+
+Allow ALL HTTP methods.
+
+Examples:
+
+* GET
+* POST
+* PUT
+* DELETE
+
+`*` means all.
+
+---
+
+```python
+allow_headers=["*"],
+```
+
+Allow all request headers.
+
+---
+
+```python
+)
+```
+
+End middleware setup.
+
+---
+
+# ROUTES
+
+---
+
+```python
+app.include_router(router)
+```
+
+Attach routes from `routes.py`.
+
+Without this:
+your APIs won't exist.
+
+---
+
+# ROOT HEALTH CHECK
+
+---
+
+```python
+@app.get("/")
+```
+
+This creates API endpoint.
+
+Means:
+
+```text
+GET /
+```
+
+Example:
+
+```text
+http://localhost:8000/
+```
+
+---
+
+# IMPORTANT CONCEPT — DECORATOR
+
+`@app.get("/")`
+
+Decorator modifies function behavior.
+
+It tells FastAPI:
+
+> "This function should run when user calls `/`"
+
+---
+
+```python
+def root():
+```
+
+Defines function.
+
+---
+
+```python
+return {
+```
+
+Returns dictionary.
+
+FastAPI automatically converts it to JSON.
+
+---
+
+```python
+"message": "Enterprise Bid Intelligence Platform Running",
+```
+
+JSON response field.
+
+---
+
+```python
+"version": "2.0.0",
+```
+
+API version.
+
+---
+
+```python
+"status": "healthy",
+```
+
+Health status.
+
+---
+
+```python
+"features": [
+```
+
+List of features.
+
+---
+
+```python
+]
+```
+
+End list.
+
+---
+
+```python
+}
+```
+
+End dictionary.
+
+---
+
+# HEALTH API
+
+---
+
+```python
+@app.get("/health")
+```
+
+Another endpoint.
+
+Used by:
+
+* DevOps
+* Kubernetes
+* monitoring systems
+
+to check if server alive.
+
+---
+
+```python
+def health_check():
+```
+
+Health check function.
+
+---
+
+```python
+return {
+```
+
+Return health JSON.
+
+---
+
+```python
+"database": "PostgreSQL + pgvector",
+```
+
+Shows DB being used.
+
+---
+
+```python
+"llm": "Ollama + Mistral",
+```
+
+Shows AI stack.
+
+---
+
+```python
+"retrieval": "RAG Enabled"
+```
+
+Shows RAG active.
+
+---
+
+# FINAL STARTUP LOGS
+
+---
+
+```python
+print("FastAPI routes loaded successfully")
+```
+
+Startup confirmation.
+
+---
+
+```python
+print("API Ready")
+```
+
+Backend ready message.
+
+---
+
+# FLOW OF MAIN.PY
+
+```text
+Server Starts
+    ↓
+Create FastAPI app
+    ↓
+Enable CORS
+    ↓
+Load routes
+    ↓
+Expose APIs
+    ↓
+Wait for frontend requests
+```
+
+---
+
+# FILE 2 — `backend/app/db.py`
+
+This file handles DATABASE operations.
+
+Think:
+
+```text
+db.py = database manager
+```
+
+It:
+
+* connects PostgreSQL
+* creates tables
+* inserts data
+* retrieves data
+* caches AI results
+
+---
+
+# IMPORTS
+
+---
+
+```python
+import psycopg2
+```
+
+Library for PostgreSQL connection.
+
+Without this:
+Python cannot talk to PostgreSQL.
+
+---
+
+```python
+import json
+```
+
+Used to convert Python dictionaries ↔ JSON.
+
+---
+
+```python
+from datetime import datetime
+```
+
+Imports date/time utilities.
+
+(Not heavily used yet.)
+
+---
+
+# DATABASE CONNECTION
+
+---
+
+```python
+def get_conn():
+```
+
+Function that creates DB connection.
+
+---
+
+```python
+return psycopg2.connect(
+```
+
+Open connection to PostgreSQL.
+
+Think:
+
+```text
+Python ↔ PostgreSQL tunnel
+```
+
+---
+
+```python
+dbname="bid",
+```
+
+Database name.
+
+---
+
+```python
+user="postgres",
+```
+
+DB username.
+
+---
+
+```python
+password="admin",
+```
+
+DB password.
+
+---
+
+```python
+host="localhost",
+```
+
+Database running on same machine.
+
+---
+
+```python
+port="5432"
+```
+
+Default PostgreSQL port.
+
+---
+
+# init_db()
+
+This function creates ALL database tables.
+
+Think:
+
+```text
+System installation/setup function
+```
+
+---
+
+```python
+conn = get_conn()
+```
+
+Open database connection.
+
+---
+
+```python
+cur = conn.cursor()
+```
+
+Creates cursor.
+
+Cursor executes SQL commands.
+
+Think:
+
+```text
+cursor = SQL command executor
+```
+
+---
+
+# ENABLE PGVECTOR
+
+---
+
+```python
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+Enables pgvector extension.
+
+pgvector stores AI embeddings.
+
+Embeddings = numerical representation of text.
+
+Used for semantic search.
+
+---
+
+# CREATE TABLE
+
+---
+
+```python
+CREATE TABLE IF NOT EXISTS kb_chunks (
+```
+
+Creates table.
+
+`IF NOT EXISTS`
+prevents crash if table already exists.
+
+---
+
+# SERIAL PRIMARY KEY
+
+---
+
+```python
+id SERIAL PRIMARY KEY,
+```
+
+Auto-increment ID.
+
+Like:
+1
+2
+3
+4
+
+Unique row identifier.
+
+---
+
+# TEXT FIELD
+
+---
+
+```python
+content TEXT NOT NULL,
+```
+
+Stores chunk text.
+
+`NOT NULL`
+means value required.
+
+---
+
+# VECTOR FIELD
+
+---
+
+```python
+embedding VECTOR(384),
+```
+
+Stores AI embedding vector.
+
+384 = embedding dimensions.
+
+---
+
+# created_at
+
+---
+
+```python
+created_at TIMESTAMP DEFAULT NOW()
+```
+
+Stores automatic creation time.
+
+---
+
+# COMPLIANCE CACHE TABLE
+
+This stores previous AI answers.
+
+Purpose:
+avoid repeated expensive AI calls.
+
+---
+
+# review_results table
+
+Stores compliance evaluation results.
+
+---
+
+# FOREIGN KEY
+
+---
+
+```python
+bid_review_id INTEGER REFERENCES bid_reviews(id)
+```
+
+Links table to another table.
+
+Think:
+
+```text
+review_results belongs to bid_reviews
+```
+
+---
+
+# ON DELETE CASCADE
+
+---
+
+```python
+ON DELETE CASCADE
+```
+
+If parent deleted,
+child rows automatically deleted.
+
+---
+
+# commit()
+
+---
+
+```python
+conn.commit()
+```
+
+Saves changes permanently.
+
+Without commit:
+changes disappear.
+
+---
+
+# close()
+
+---
+
+```python
+cur.close()
+conn.close()
+```
+
+Cleanup resources.
+
+Very important.
+
+---
+
+# insert_chunk()
+
+Stores KB chunks into DB.
+
+---
+
+```python
+INSERT INTO kb_chunks
+```
+
+SQL insert statement.
+
+---
+
+```python
+VALUES (%s, %s, %s, %s)
+```
+
+Parameterized query.
+
+VERY IMPORTANT SECURITY FEATURE.
+
+Prevents:
+SQL Injection attacks.
+
+---
+
+# search_chunks()
+
+Performs vector similarity search.
+
+---
+
+```python
+ORDER BY embedding <-> %s::vector
+```
+
+THIS IS VERY IMPORTANT.
+
+`<->`
+means vector distance operator.
+
+Smaller distance = more similar text.
+
+This is semantic search.
+
+---
+
+# CACHE FUNCTIONS
+
+---
+
+# get_cached_result()
+
+Checks if evaluation already exists.
+
+---
+
+```python
+SELECT result
+FROM compliance_cache
+```
+
+Retrieve cached AI result.
+
+---
+
+# save_cached_result()
+
+Stores AI output into cache.
+
+---
+
+```python
+json.dumps(result)
+```
+
+Convert Python dictionary → JSON string.
+
+---
+
+# create_bid_review()
+
+Creates master review record.
+
+---
+
+```python
+RETURNING id
+```
+
+Returns newly created row ID.
+
+Very useful.
+
+---
+
+# FILE 3 — `routes.py`
+
+This file defines API endpoints.
+
+Think:
+
+```text
+routes.py = receptionist of backend
+```
+
+It receives frontend requests.
+
+---
+
+# APIRouter
+
+---
+
+```python
+router = APIRouter()
+```
+
+Creates route manager.
+
+---
+
+# UploadFile
+
+Allows file upload.
+
+---
+
+# Form
+
+Reads form fields from frontend.
+
+---
+
+# File
+
+Reads uploaded files.
+
+---
+
+# subprocess
+
+---
+
+```python
+import subprocess
+```
+
+Allows running another Python script.
+
+---
+
+# build-refresh-index API
+
+---
+
+```python
+@router.post("/build-refresh-index")
+```
+
+POST API endpoint.
+
+Frontend calls this to rebuild knowledge base.
+
+---
+
+# Form(...)
+
+---
+
+```python
+docs_path: str = Form(...)
+```
+
+Required form field.
+
+`...`
+means mandatory.
+
+---
+
+# subprocess.run()
+
+Runs external script:
+
+```text
+load_kb.py
+```
+
+This builds embeddings.
+
+---
+
+# sys.executable
+
+Uses same Python interpreter.
+
+Very important in virtual environments.
+
+---
+
+# stdout=subprocess.PIPE
+
+Capture script output.
+
+---
+
+# stderr=subprocess.PIPE
+
+Capture errors.
+
+---
+
+# REVIEW API
+
+MOST IMPORTANT API.
+
+---
+
+```python
+@router.post("/review")
+```
+
+Main AI review endpoint.
+
+---
+
+# UploadFile = File(None)
+
+Optional uploaded file.
+
+---
+
+# rfp_text: str = Form(None)
+
+Alternative text input.
+
+---
+
+# await rfp.read()
+
+Asynchronously read uploaded file.
+
+---
+
+# extract_text()
+
+Converts file → plain text.
+
+---
+
+# REQUIREMENT EXTRACTION
+
+---
+
+```python
+requirements = [
+```
+
+List comprehension.
+
+VERY IMPORTANT PYTHON FEATURE.
+
+Equivalent to loop.
+
+---
+
+```python
+for line in rfp_text.split("\n")
+```
+
+Split text into lines.
+
+---
+
+```python
+if len(line.strip()) > 30
+```
+
+Ignore short/noisy lines.
+
+---
+
+```python
+][:15]
+```
+
+Take only first 15 requirements.
+
+---
+
+# EVALUATION LOOP
+
+---
+
+```python
+for index, req in enumerate(
+```
+
+Loop through requirements.
+
+`enumerate`
+gives:
+
+* index
+* value
+
+---
+
+# evaluate()
+
+Calls AI compliance engine.
+
+---
+
+# EXECUTIVE SUMMARY
+
+Counts:
+
+* compliant
+* partial
+* not addressed
+
+---
+
+# avg_shipley_score
+
+Calculates average score.
+
+---
+
+# FILE 4 — `compliance.py`
+
+THIS IS THE CORE AI ENGINE.
+
+---
+
+# extract_json()
+
+AI sometimes returns messy output.
+
+This function extracts valid JSON safely.
+
+---
+
+# regex
+
+---
+
+```python
+re.search(r"\{.*\}", text, re.DOTALL)
+```
+
+Find JSON block inside text.
+
+Regex = text pattern matching.
+
+---
+
+# generate_hash()
+
+Creates unique fingerprint.
+
+Used for cache.
+
+---
+
+# sha256
+
+Generates cryptographic hash.
+
+Same input → same hash.
+
+---
+
+# evaluate()
+
+MAIN AI WORKFLOW.
+
+---
+
+# FLOW
+
+```text
+Requirement
+    ↓
+Check Cache
+    ↓
+Retrieve Evidence (RAG)
+    ↓
+Build Prompt
+    ↓
+Call LLM
+    ↓
+Parse JSON
+    ↓
+Calculate Shipley Score
+    ↓
+Save Cache
+    ↓
+Return Result
+```
+
+---
+
+# retrieve()
+
+Gets supporting evidence from KB.
+
+---
+
+# PROMPT ENGINEERING
+
+Huge multi-line prompt sent to AI.
+
+This is where AI behavior controlled.
+
+---
+
+# call_llm()
+
+Sends prompt to Ollama.
+
+---
+
+# parsed = extract_json(output)
+
+Convert AI output → Python dictionary.
+
+---
+
+# Shipley Scoring
+
+Adds enterprise scoring.
+
+---
+
+# parsed["shipley_score"]
+
+Adds extra field to result.
+
+---
+
+# save_cached_result()
+
+Avoid future repeated AI calls.
+
+Huge performance optimization.
+
+---
+
+# FILE 5 — `rag.py`
+
+This is semantic search engine.
+
+---
+
+# SentenceTransformer
+
+AI embedding model.
+
+Converts text → vectors.
+
+---
+
+# Lazy Loading
+
+---
+
+```python
+if model is None:
+```
+
+Load model only once.
+
+Huge memory optimization.
+
+---
+
+# embed()
+
+Creates embedding vector.
+
+---
+
+# model.encode(text)
+
+AI converts text → numbers.
+
+---
+
+# calculate_confidence()
+
+Assigns confidence based on ranking.
+
+---
+
+# retrieve()
+
+RAG retrieval engine.
+
+---
+
+# VECTOR SEARCH FLOW
+
+```text
+User Query
+    ↓
+Convert to Embedding
+    ↓
+Search pgvector
+    ↓
+Return Similar Chunks
+```
+
+---
+
+# FILE 6 — `shipley.py`
+
+Proposal quality scoring engine.
+
+---
+
+# pandas
+
+Used to read Excel.
+
+---
+
+# load_shipley_reference()
+
+Loads Shipley guidelines Excel file.
+
+---
+
+# score_customer_language()
+
+Checks enterprise keywords.
+
+Example:
+
+* governance
+* transformation
+* SLA
+* ownership
+
+---
+
+# score_commitment_strength()
+
+Checks strong commitment words:
+
+* will
+* shall
+* guarantee
+
+---
+
+# calculate_shipley_score()
+
+Combines all scoring functions.
+
+---
+
+# shipley_band()
+
+Converts numeric score → business rating.
+
+---
+
+# FILE 7 — `extractor.py`
+
+Document extraction engine.
+
+---
+
+# BytesIO
+
+Treats bytes like file.
+
+---
+
+# DOCX extraction
+
+Uses:
+
+```python
+Document(stream)
+```
+
+Reads Word document.
+
+---
+
+# PDF extraction
+
+Uses:
+
+```python
+pdfplumber
+```
+
+Reads PDF pages.
+
+---
+
+# Excel extraction
+
+Uses:
+
+```python
+load_workbook()
+```
+
+Reads Excel workbook.
+
+---
+
+# iter_rows()
+
+Loops through Excel rows.
+
+---
+
+# extract_text()
+
+Master router.
+
+Detects file type automatically.
+
+---
+
+# endswith()
+
+Checks file extension.
+
+---
+
+# FILE 8 — `llm.py`
+
+AI communication layer.
+
+---
+
+# requests
+
+HTTP request library.
+
+---
+
+# OLLAMA_URL
+
+Local AI server endpoint.
+
+---
+
+# REQUEST_TIMEOUT = 600
+
+Wait 10 minutes before timeout.
+
+---
+
+# validate_response()
+
+Checks AI response structure.
+
+---
+
+# requests.post()
+
+Sends HTTP request to Ollama.
+
+---
+
+# json={}
+
+Request body sent to AI.
+
+---
+
+# stream=False
+
+Wait for complete response.
+
+---
+
+# response.raise_for_status()
+
+Throws error if:
+
+* 500
+* 404
+* 401
+
+---
+
+# RETRIES
+
+---
+
+```python
+for attempt in range(
+```
+
+Retry mechanism.
+
+Very important enterprise feature.
+
+---
+
+# requests.Timeout
+
+Handles slow AI response.
+
+---
+
+# ConnectionError
+
+Handles Ollama offline.
+
+---
+
+# time.sleep()
+
+Wait before retry.
+
+---
+
+# OVERALL SYSTEM FLOW
+
+# COMPLETE ENTERPRISE FLOW
+
+```text
+Frontend Uploads Files
+        ↓
+routes.py receives request
+        ↓
+extractor.py extracts text
+        ↓
+requirements extracted
+        ↓
+compliance.py starts evaluation
+        ↓
+cache checked
+        ↓
+rag.py retrieves evidence
+        ↓
+llm.py calls Ollama
+        ↓
+shipley.py scores response
+        ↓
+db.py stores results
+        ↓
+JSON returned to frontend
+```
+
+---
+
+# WHAT YOU HAVE ACTUALLY BUILT
+
+You are not building a simple chatbot.
+
+You are building:
+
+```text
+Enterprise AI Bid Review Platform
+```
+
+with:
+
+* FastAPI
+* PostgreSQL
+* pgvector
+* RAG
+* embeddings
+* semantic search
+* AI orchestration
+* Shipley scoring
+* caching
+* document ingestion
+* compliance engine
+* retrieval engine
+
+This is enterprise-level architecture.

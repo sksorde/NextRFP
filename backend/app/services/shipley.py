@@ -1,32 +1,26 @@
-# app/services/shipley.py
-
-"""
-PHASE 2 — ENTERPRISE SHIPLEY SCORING ENGINE
-
-This module upgrades simple status-based scoring into
-true enterprise Shipley-style scoring using:
-
-1. Compliance completeness
-2. Win theme strength
-3. Proof points / evidence quality
-4. Customer language alignment
-5. Risk mitigation
-6. Executive value proposition
-7. Differentiators / discriminators
-8. Delivery confidence
-9. Ownership clarity
-10. Past performance strength
-
-It also uses:
-backend/knowledge_base/shipley_scoring/Shipley_PQR_Guidelines.xlsx
-
-to enrich scoring logic.
-
-This becomes the REAL Shipley scoring layer.
-"""
+# ============================================================
+# TRUE ENTERPRISE SHIPLEY RUBRIC ENGINE
+# ============================================================
 
 import os
 import pandas as pd
+import math
+
+def safe_float(value, default=0.0):
+    """
+    Prevent NaN propagation from Excel.
+    """
+
+    try:
+        v = float(value)
+
+        if math.isnan(v):
+            return default
+
+        return v
+
+    except:
+        return default
 
 
 SHIPLEY_FILE = (
@@ -35,30 +29,73 @@ SHIPLEY_FILE = (
 )
 
 
+# ============================================================
+# LOAD RUBRIC
+# ============================================================
+
+
 def load_shipley_reference():
     """
-    Load Shipley scoring reference Excel.
-
-    Safe fallback:
-    if file not found → continue without breaking system.
+    Load actual Shipley rubric sheet.
     """
 
     try:
         if not os.path.exists(SHIPLEY_FILE):
-            print("Shipley reference file not found.")
+            print("Shipley rubric file missing")
             return []
 
-        df = pd.read_excel(SHIPLEY_FILE)
-
-        print(
-            f"Loaded Shipley reference rows: {len(df)}"
+        df = pd.read_excel(
+            SHIPLEY_FILE,
+            sheet_name="Combined Response Evaluation"
         )
 
-        return df.fillna("").to_dict(orient="records")
+        df.columns = [
+            str(c).strip()
+            for c in df.columns
+        ]
+
+        rows = []
+
+        for _, row in df.iterrows():
+
+            criterion = str(
+                row.iloc[0]
+            ).strip()
+
+            weight = safe_float(row.iloc[1])
+
+            if weight <= 0:
+                continue
+
+            if (
+                not criterion
+                or criterion == "nan"
+                or criterion.startswith(
+                    "DRAFT PROPOSAL"
+                )
+            ):
+                continue
+
+            rows.append({
+                "criterion": criterion,
+                "weight": safe_float(row.iloc[1]),
+                "excellent": str(row.iloc[3]),
+                "good": str(row.iloc[4]),
+                "acceptable": str(row.iloc[5]),
+                "below": str(row.iloc[6]),
+                "poor": str(row.iloc[7]),
+                "unacceptable": str(row.iloc[8])
+            })
+
+        print(
+            f"Loaded Shipley rubric rows: {len(rows)}"
+        )
+
+        return rows
 
     except Exception as e:
         print(
-            f"Shipley Excel load failed: {str(e)}"
+            f"Shipley rubric load failed: {str(e)}"
         )
         return []
 
@@ -66,158 +103,117 @@ def load_shipley_reference():
 SHIPLEY_REFERENCE = load_shipley_reference()
 
 
-def score_compliance(status):
+# ============================================================
+# TEXT MATCHING
+# ============================================================
+
+
+def calculate_match_score(
+    response,
+    rubric_text
+):
     """
-    Base compliance score
+    Simple semantic-style keyword overlap.
+
+    Can later be upgraded to:
+    - embeddings
+    - reranker
+    - LLM scoring
     """
 
-    if status == "COMPLIANT":
-        return 25
-
-    if status == "PARTIAL":
-        return 12
-
-    return 0
-
-
-def score_evidence(evidence):
-    """
-    Evidence quality score
-    """
-
-    if not evidence:
+    if not response:
         return 0
 
-    if len(evidence) >= 5:
-        return 15
+    if not rubric_text:
+        return 0
 
-    if len(evidence) >= 3:
-        return 10
+    response = response.lower()
 
-    return 5
-
-
-def score_customer_language(response):
-    """
-    Customer language alignment
-
-    Higher score if response reflects
-    buyer language instead of generic vendor language.
-    """
-
-    keywords = [
-        "outcome",
-        "value",
-        "business impact",
-        "transformation",
-        "service level",
-        "governance",
-        "security",
-        "compliance",
-        "delivery model",
-        "risk mitigation",
-        "stakeholder",
-        "ownership"
+    words = [
+        w.strip(".,:;()[]")
+        for w in rubric_text.lower().split()
+        if len(w) > 4
     ]
 
-    score = 0
+    if not words:
+        return 0
 
-    text = response.lower()
+    matched = 0
 
-    for word in keywords:
-        if word in text:
-            score += 2
+    for word in set(words):
+        if word in response:
+            matched += 1
 
-    return min(score, 15)
+    return matched / len(set(words))
 
 
-def score_commitment_strength(response):
+# ============================================================
+# DETERMINE RUBRIC LEVEL
+# ============================================================
+
+
+def evaluate_criterion(
+    criterion,
+    response,
+    evidence
+):
     """
-    Explicit commitments score
-
-    Stronger when words like:
-    shall / will / committed / guaranteed
-    are present
+    Evaluate response against rubric levels.
     """
 
-    strong_words = [
-        "shall",
-        "will",
-        "committed",
-        "guarantee",
-        "ensure",
-        "deliver",
-        "provide",
-        "own",
-        "responsible",
-        "sla"
+    levels = [
+        (5, "excellent"),
+        (4, "good"),
+        (3, "acceptable"),
+        (2, "below"),
+        (1, "poor"),
+        (0, "unacceptable")
     ]
 
-    score = 0
-    text = response.lower()
+    best_level = 0
+    best_score = 0
+    best_name = "UNACCEPTABLE"
 
-    for word in strong_words:
-        if word in text:
-            score += 2
+    for score, key in levels:
 
-    return min(score, 15)
+        rubric_text = criterion.get(key, "")
+
+        similarity = calculate_match_score(
+            response,
+            rubric_text
+        )
+
+        weighted = similarity * score
+
+        if weighted > best_score:
+            best_score = weighted
+            best_level = score
+            best_name = key.upper()
+
+    max_weight = safe_float(
+        criterion["weight"],
+        0
+    )
+
+    normalized = (
+        best_level / 5
+    ) * max_weight
+
+    return {
+        "criterion": criterion["criterion"],
+        "level": best_name,
+        "maturity_score": best_level,
+        "weight": max_weight,
+        "weighted_score": round(normalized, 2),
+        "explanation": (
+            f"Matched rubric level: {best_name}"
+        )
+    }
 
 
-def score_differentiators(response):
-    """
-    Differentiator score
-
-    Helps identify:
-    why client should choose this bidder
-    """
-
-    keywords = [
-        "unique",
-        "proven",
-        "accelerator",
-        "framework",
-        "innovation",
-        "best practice",
-        "certified",
-        "award",
-        "case study",
-        "reference client"
-    ]
-
-    score = 0
-    text = response.lower()
-
-    for word in keywords:
-        if word in text:
-            score += 2
-
-    return min(score, 15)
-
-
-def score_risk_mitigation(response):
-    """
-    Risk handling score
-    """
-
-    keywords = [
-        "risk",
-        "mitigation",
-        "dependency",
-        "assumption",
-        "contingency",
-        "fallback",
-        "governance",
-        "escalation"
-    ]
-
-    score = 0
-    text = response.lower()
-
-    for word in keywords:
-        if word in text:
-            score += 2
-
-    return min(score, 15)
+# ============================================================
+# MAIN ENGINE
+# ============================================================
 
 
 def calculate_shipley_score(
@@ -226,29 +222,62 @@ def calculate_shipley_score(
     evidence
 ):
     """
-    FINAL ENTERPRISE SHIPLEY SCORE
-
-    Total = 100
+    TRUE SHIPLEY RUBRIC EVALUATION ENGINE.
     """
 
     total = 0
 
-    total += score_compliance(status)
-    total += score_evidence(evidence)
-    total += score_customer_language(response)
-    total += score_commitment_strength(response)
-    total += score_differentiators(response)
-    total += score_risk_mitigation(response)
+    breakdown = []
 
-    return min(total, 100)
+    for criterion in SHIPLEY_REFERENCE:
+
+        result = evaluate_criterion(
+            criterion,
+            response,
+            evidence
+        )
+
+        breakdown.append(result)
+
+        total += result[
+            "weighted_score"
+        ]
+
+    # =====================================================
+    # COMPLIANCE BOOST
+    # =====================================================
+
+    if status == "COMPLIANT":
+        total += 5
+
+    elif status == "PARTIAL":
+        total += 2
+
+    if math.isnan(total):
+        total = 0
+
+    final_score = min(
+        round(total, 2),
+        100
+    )
+
+    return {
+        "total_score": final_score,
+        "details": breakdown
+    }
+
+
+# ============================================================
+# EXECUTIVE BAND
+# ============================================================
 
 
 def shipley_band(score):
-    """
-    Executive grading band
-    """
 
-    if score >= 85:
+    if score >= 90:
+        return "OUTSTANDING"
+
+    if score >= 80:
         return "EXCELLENT"
 
     if score >= 70:
@@ -260,31 +289,66 @@ def shipley_band(score):
     return "HIGH RISK"
 
 
-def build_shipley_guidance(score):
-    """
-    Executive recommendation
-    """
+# ============================================================
+# GUIDANCE
+# ============================================================
 
-    if score >= 85:
-        return (
-            "Strong submission with high win probability. "
-            "Focus on executive polish and stronger proof points."
-        )
 
-    if score >= 70:
-        return (
-            "Competitive proposal. Improve customer language, "
-            "ownership clarity, and differentiation."
-        )
+def build_shipley_guidance(
+    score,
+    details
+):
 
-    if score >= 50:
+    weak = []
+
+    for d in details:
+
+        pct = (
+            d["weighted_score"]
+            / d["weight"]
+        ) * 100
+
+        if pct < 50:
+            weak.append(
+                d["criterion"]
+            )
+
+    if not weak:
         return (
-            "Moderate risk. Add stronger commitments, "
-            "governance, measurable outcomes, and proof."
+            "Proposal demonstrates strong "
+            "Shipley maturity across all "
+            "evaluation dimensions."
         )
 
     return (
-        "High risk submission. Major response gaps exist. "
-        "Rewrite with explicit compliance mapping, "
-        "delivery ownership, and clear commitments."
+        "Improve proposal maturity in: "
+        + ", ".join(weak)
     )
+
+
+# ============================================================
+# TRACEABILITY EVIDENCE
+# ============================================================
+
+
+def build_shipley_evidence(details):
+
+    evidence = []
+
+    for item in details:
+
+        evidence.append({
+            "content": (
+                f"Shipley criterion evaluated: "
+                f"{item['criterion']} | "
+                f"Level: {item['level']} | "
+                f"Weighted Score: "
+                f"{item['weighted_score']}"
+            ),
+            "source": "Shipley_PQR_Guidelines.xlsx",
+            "category": "shipley_scoring",
+            "confidence": 95,
+            "rank": "shipley_rubric"
+        })
+
+    return evidence
