@@ -8,7 +8,10 @@ from app.services.rag import retrieve
 from app.services.shipley import (
     calculate_shipley_score,
     shipley_band,
-    build_shipley_guidance
+    build_shipley_guidance,
+    calculate_executive_confidence,
+    calculate_win_probability,
+    win_probability_band
 )
 
 from app.utils.llm import call_llm
@@ -83,24 +86,70 @@ def build_recommendation(status, score):
     - shipley score
     """
 
-    if status == "COMPLIANT" and score >= 85:
+    if status == "COMPLIANT":
+
+        if score >= 85:
+            return (
+                "Strong compliant response with "
+                "high proposal maturity and "
+                "strong win probability."
+            )
+
+        if score >= 70:
+            return (
+                "Compliant response with good "
+                "proposal maturity. Improve "
+                "differentiators, governance, "
+                "and executive messaging."
+            )
+
+        if score >= 50:
+            return (
+                "Compliant response but proposal "
+                "maturity is moderate. Strengthen "
+                "customer value proposition, "
+                "proof points, commitments, "
+                "and measurable outcomes."
+            )
+
         return (
-            "Strong compliant response. Improve executive "
-            "messaging, measurable outcomes, and proof points "
-            "to maximize win probability."
+            "Compliant response detected but "
+            "proposal quality is weak. Improve "
+            "executive alignment, ownership, "
+            "risk mitigation, and delivery "
+            "confidence."
         )
+
+    # =================================================
+    # PARTIAL
+    # =================================================
 
     if status == "PARTIAL":
+
+        if score >= 60:
+            return (
+                "Partial compliance detected. "
+                "Response addresses portions "
+                "of requirement but lacks "
+                "full commitment clarity."
+            )
+
         return (
-            "Partial compliance detected. Add explicit commitments, "
-            "delivery ownership, governance model, SLA language, "
-            "and customer-specific value propositions."
+            "Partial compliance with weak "
+            "proposal maturity. Add explicit "
+            "commitments, governance model, "
+            "SLA language, and ownership."
         )
 
+    # =================================================
+    # NOT ADDRESSED
+    # =================================================
+
     return (
-        "Major compliance gap detected. Rewrite response with "
-        "direct requirement mapping, clear commitments, evidence, "
-        "and strong delivery confidence."
+        "Requirement not adequately addressed. "
+        "Rewrite response with direct requirement "
+        "mapping, measurable commitments, "
+        "evidence, and delivery approach."
     )
 
 
@@ -263,6 +312,57 @@ Return ONLY this JSON:
         )
 
         from app.services.shipley import (
+            calculate_executive_confidence
+        )
+
+        executive_confidence = (
+            calculate_executive_confidence(
+                status=status,
+                shipley_score=shipley_score,
+                evidence=evidence,
+                shipley_details=shipley_details
+            )
+        )
+
+        """ evidence.extend(
+            executive_confidence
+        ) """
+
+        from app.services.shipley import (
+            calculate_win_probability
+        )
+
+        win_probability = (
+            calculate_win_probability(
+                status=status,
+                shipley_score=shipley_score,
+                executive_confidence=executive_confidence,
+                shipley_details=shipley_details,
+                evidence=evidence
+            )
+        )
+
+        win_prediction = (
+            win_probability_band(
+                win_probability
+            )
+        )
+
+        from app.services.shipley import (
+            generate_llm_recommendation
+        )
+
+        llm_recommendation = generate_llm_recommendation(
+            requirement=req,
+            response=response,
+            status=status,
+            shipley_score=shipley_score,
+            shipley_rating=shipley_rating,
+            shipley_details=shipley_details,
+            evidence=evidence
+        )
+
+        from app.services.shipley import (
             build_shipley_evidence
         )
 
@@ -293,7 +393,18 @@ Return ONLY this JSON:
         parsed["shipley_breakdown"] = (
             shipley_details
         )
-        parsed["recommendation"] = recommendation
+        parsed["recommendation"] = (
+            llm_recommendation
+        )
+        parsed["confidence"] = (
+            executive_confidence
+        )
+        parsed["win_probability"] = (
+            win_probability
+        )
+        parsed["win_prediction"] = (
+            win_prediction
+        )
         parsed["evidence"] = evidence
 
         # =============================================

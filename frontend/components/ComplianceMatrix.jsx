@@ -53,7 +53,7 @@ export default function ComplianceMatrix({ results }) {
               <th style={thStyle}>Requirement</th>
               <th style={thStyle}>Status</th>
               <th style={thStyle}>Shipley Score</th>
-              <th style={thStyle}>Confidence</th>
+              <th style={thStyle}>Proposal Confidence</th>
               <th style={thStyle}>Recommendation</th>
             </tr>
           </thead>

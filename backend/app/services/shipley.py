@@ -5,6 +5,298 @@
 import os
 import pandas as pd
 import math
+from app.utils.llm import call_llm
+import json
+
+def calculate_win_probability(
+    status,
+    shipley_score,
+    executive_confidence,
+    shipley_details,
+    evidence
+):
+    """
+    Enterprise win probability engine.
+    """
+
+    score = 0
+
+    # =================================================
+    # COMPLIANCE
+    # =================================================
+
+    if status == "COMPLIANT":
+        score += 30
+
+    elif status == "PARTIAL":
+        score += 15
+
+    # =================================================
+    # SHIPLEY SCORE
+    # =================================================
+
+    score += (
+        shipley_score * 0.35
+    )
+
+    # =================================================
+    # EXECUTIVE CONFIDENCE
+    # =================================================
+
+    score += (
+        executive_confidence * 0.2
+    )
+
+    # =================================================
+    # EVIDENCE STRENGTH
+    # =================================================
+
+    evidence_strength = min(
+        len(evidence) * 2,
+        10
+    )
+
+    score += evidence_strength
+
+    # =================================================
+    # DIFFERENTIATOR ANALYSIS
+    # =================================================
+
+    strong_criteria = 0
+
+    for item in shipley_details:
+
+        if item["weight"] <= 0:
+            continue
+
+        pct = (
+            item["weighted_score"]
+            / item["weight"]
+        ) * 100
+
+        if pct >= 75:
+            strong_criteria += 1
+
+    score += min(
+        strong_criteria * 1.5,
+        10
+    )
+
+    return min(
+        round(score, 1),
+        100
+    )
+
+# ============================================================
+# WIN CLASSIFICATION
+# ============================================================
+
+def win_probability_band(score):
+    """
+    Executive win probability classification.
+    """
+
+    if score >= 85:
+        return "HIGH WIN PROBABILITY"
+
+    if score >= 70:
+        return "COMPETITIVE"
+
+    if score >= 50:
+        return "MODERATE WIN POTENTIAL"
+
+    return "LOW WIN PROBABILITY"
+
+def calculate_executive_confidence(
+    status,
+    shipley_score,
+    evidence,
+    shipley_details
+):
+    """
+    Enterprise proposal confidence score.
+
+    Represents overall proposal strength,
+    not just LLM certainty.
+    """
+
+    confidence = 0
+
+    # =================================================
+    # COMPLIANCE CONTRIBUTION
+    # =================================================
+
+    if status == "COMPLIANT":
+        confidence += 35
+
+    elif status == "PARTIAL":
+        confidence += 20
+
+    # =================================================
+    # SHIPLEY CONTRIBUTION
+    # =================================================
+
+    confidence += (
+        shipley_score * 0.4
+    )
+
+    # =================================================
+    # EVIDENCE CONTRIBUTION
+    # =================================================
+
+    evidence_strength = min(
+        len(evidence) * 3,
+        15
+    )
+
+    confidence += evidence_strength
+
+    # =================================================
+    # RUBRIC MATURITY CONTRIBUTION
+    # =================================================
+
+    strong_criteria = 0
+
+    for item in shipley_details:
+
+        if item["weight"] <= 0:
+            continue
+
+        pct = (
+            item["weighted_score"]
+            / item["weight"]
+        ) * 100
+
+        if pct >= 70:
+            strong_criteria += 1
+
+    confidence += min(
+        strong_criteria * 2,
+        10
+    )
+
+    return min(
+        round(confidence, 1),
+        100
+    )
+
+def generate_llm_recommendation(
+    requirement,
+    response,
+    status,
+    shipley_score,
+    shipley_rating,
+    shipley_details,
+    evidence
+):
+    """
+    Generate executive Shipley recommendation
+    using LLM + rubric scoring.
+    """
+
+    try:
+
+        weak_areas = []
+
+        for item in shipley_details:
+
+            pct = 0
+
+            if item["weight"] > 0:
+                pct = (
+                    item["weighted_score"]
+                    / item["weight"]
+                ) * 100
+
+            if pct < 60:
+                weak_areas.append({
+                    "criterion": item["criterion"],
+                    "score": item["weighted_score"],
+                    "weight": item["weight"]
+                })
+
+        prompt = f"""
+You are a senior Shipley proposal reviewer.
+
+Your task:
+Generate executive-quality recommendation
+for improving proposal quality.
+
+================================================
+
+Requirement:
+{requirement}
+
+================================================
+
+Compliance Status:
+{status}
+
+================================================
+
+Shipley Score:
+{shipley_score}
+
+================================================
+
+Shipley Rating:
+{shipley_rating}
+
+================================================
+
+Weak Areas:
+{json.dumps(weak_areas, indent=2)}
+
+================================================
+
+Vendor Response:
+{response[:1500]}
+
+================================================
+
+Evidence Summary:
+{
+json.dumps(
+    [
+        {
+            "source": e.get("source"),
+            "content": e.get("content", "")[:200]
+        }
+        for e in evidence[:3]
+    ],
+    indent=2
+)
+}
+
+================================================
+
+Rules:
+- Be concise
+- Be executive-focused
+- Mention strongest weaknesses
+- Mention win probability
+- Mention proposal maturity
+- Mention missing commitments if applicable
+- Mention differentiators if weak
+- Max 120 words
+
+Return ONLY recommendation text.
+"""
+
+        result = call_llm(prompt)
+
+        return result.strip()
+
+    except Exception as e:
+
+        print(
+            f"LLM recommendation failed: {str(e)}"
+        )
+
+        return (
+            "Unable to generate executive "
+            "recommendation."
+        )
 
 def safe_float(value, default=0.0):
     """

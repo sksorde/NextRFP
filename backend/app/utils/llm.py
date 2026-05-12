@@ -21,18 +21,23 @@ Future upgrade ready for:
 - Claude
 - GPT Enterprise
 """
-
+import os
 import time
 import requests
+from dotenv import load_dotenv
 
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "mistral"
+# Load environment variables from backend/.env
+load_dotenv()
 
-REQUEST_TIMEOUT = 600
-MAX_RETRIES = 3
-RETRY_WAIT_SECONDS = 2
 
+
+OLLAMA_URL = os.getenv("OLLAMA_URL")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "mistral")
+
+REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", 600))
+MAX_RETRIES = int(os.getenv("MAX_RETRIES", 3))
+RETRY_WAIT_SECONDS = int(os.getenv("RETRY_WAIT_SECONDS", 2))
 
 # =====================================================
 # VALIDATE RESPONSE
